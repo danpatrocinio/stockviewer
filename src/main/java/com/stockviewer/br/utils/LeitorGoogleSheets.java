@@ -1,0 +1,101 @@
+package com.stockviewer.br.utils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.security.GeneralSecurityException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Arrays;
+
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.store.FileDataStoreFactory;
+
+import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.sheets.v4.model.ValueRange;
+import com.stockviewer.br.model.Ativo;
+import com.stockviewer.br.model.Operacao;
+import com.stockviewer.br.model.enums.Corretora;
+import com.stockviewer.br.model.enums.TipoOperacao;
+
+public class LeitorGoogleSheets {
+
+    private static Sheets sheetsService;
+    private static String APPLICATION_NAME = "Operacoes Bolsa";
+    private static SimpleDateFormat SDF_HM = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+    private static SimpleDateFormat SDF_DT = new SimpleDateFormat("dd/MM/yyyy");
+    private static String SPREADSHEET_ID = "1FRxQbvAVoD_M5QeyQxjGK7P3GlgAUmAl3_hROYsXu7E";
+
+    private static Credential authorize() throws IOException, GeneralSecurityException {
+        InputStream in = LeitorGoogleSheets.class.getResourceAsStream("/credentials.json");
+        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JacksonFactory.getDefaultInstance(), new InputStreamReader(in));
+        List<String> scopes = Arrays.asList(SheetsScopes.SPREADSHEETS);
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(GoogleNetHttpTransport.newTrustedTransport(),
+                JacksonFactory.getDefaultInstance(), clientSecrets, scopes)
+                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File("tokens")))
+                .setAccessType("offline")
+                .build();
+        Credential credential = new AuthorizationCodeInstalledApp(flow, new LocalServerReceiver()).authorize("user");
+        return credential;
+    }
+
+    private static Sheets getSheetsService() throws IOException, GeneralSecurityException {
+        Credential credential = authorize();
+        return new Sheets.Builder(GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.getDefaultInstance(), credential)
+                .setApplicationName(APPLICATION_NAME)
+                .build();
+    }
+
+    private static BigDecimal getBigDecimal(Object v) {
+        if (v == null) return null;
+        String value = v.toString().toUpperCase().replace("R$","").replace(",", ".").trim();
+        return new BigDecimal(value);
+    }
+    private static Integer getInteger(Object v) {
+        if (v == null) return null;
+        String value = v.toString().toUpperCase().replace("R$","").replace(",", ".").trim();
+        return Integer.parseInt(value);
+    }
+
+    public static List<Operacao> getLinhas() throws IOException, GeneralSecurityException, ParseException {
+        sheetsService = getSheetsService();
+        String range = "Notas!A:J";
+
+        ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, range).execute();
+
+        List<List<Object>> values = response.getValues();
+
+        if (values == null || values.isEmpty()) {
+            System.out.println("Sem dados para ler");
+        } else {
+            List<Operacao> operacoes = new ArrayList<>();
+            Ativo ativo;
+            TipoOperacao tipo;
+            Corretora corretora;
+            //System.out.println("Data/Hora           | V/C    | Data       | Ticker | Qt | Valor un. | Corretora");
+            for (List row : values) {
+                if (row.get(0).toString().startsWith("Carimbo")) continue;
+                //System.out.printf("%s | %s | %s | %s | %s | %s | %s \n", row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5), row.get(6));
+                tipo = TipoOperacao.getTipoByValue(row.get(1).toString());
+                ativo = new Ativo(row.get(3).toString(), row.get(8).toString(), getBigDecimal(row.get(9).toString()));
+                corretora = Corretora.getCorretoraByValue(row.get(6).toString());
+                operacoes.add(new Operacao(SDF_HM.parse(row.get(0).toString()), tipo, SDF_DT.parse(row.get(2).toString()),
+                        ativo, getInteger(row.get(4)), getBigDecimal(row.get(5)),
+                        corretora));
+            }
+            return operacoes;
+        }
+        return Collections.emptyList();
+    }
+}
