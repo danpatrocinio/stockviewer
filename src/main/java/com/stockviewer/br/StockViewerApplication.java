@@ -4,6 +4,7 @@ import com.stockviewer.br.model.Ativo;
 import com.stockviewer.br.model.AtivoCarteira;
 import com.stockviewer.br.model.CarteiraConsolidada;
 import com.stockviewer.br.model.Operacao;
+import com.stockviewer.br.model.enums.TipoOperacao;
 import com.stockviewer.br.repository.AtivoRepository;
 import com.stockviewer.br.repository.OperacaoRepository;
 import com.stockviewer.br.utils.LeitorGoogleSheets;
@@ -15,11 +16,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @SpringBootApplication
 public class StockViewerApplication {
@@ -64,10 +67,26 @@ public class StockViewerApplication {
     private void consolidarCarteira(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository) {
         log.info("\n\n\t\t\t\t\t\t [ Consolidando carteira ]\n");
 
+        Map<String, Operacao> consolidado = new HashMap<>();
         CarteiraConsolidada carteira = new CarteiraConsolidada();
         int count = 0;
         for (Operacao operacao : operacaoRepository.findAll()) {
+            String ticker = operacao.getAtivo().getTicker();
+            Integer quantidade = operacao.getQuantidade();
+            BigDecimal valor = operacao.getValorUnitario().multiply(new BigDecimal(quantidade));
+            if (operacao.getTipo().equals(TipoOperacao.VENDA)) {
+                quantidade = quantidade * -1;
+                valor = valor.multiply(new BigDecimal(-1));
+            }
+            if (consolidado.containsKey(ticker)) {
 
+            } else {
+                Operacao op = new Operacao();
+                Ativo at = new Ativo();
+                at.setTicker(ticker);
+                at.setNome(operacao.getAtivo().getNome());
+                op.setAtivo(at);
+            }
         }
         carteira.setAtivos(new ArrayList<>());
         log.info("\n\n\t\t\t\t\t\t [ " + count + " ativos em carteira ]\n");
