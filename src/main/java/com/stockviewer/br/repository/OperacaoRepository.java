@@ -1,10 +1,9 @@
 package com.stockviewer.br.repository;
 
 import com.stockviewer.br.model.Operacao;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
-import javax.transaction.Transactional;
-
-public interface OperacaoRepository extends CrudRepository<Operacao, Long> {
+@RepositoryRestResource(collectionResourceRel = "operacoes", path = "operacoes")
+public interface OperacaoRepository extends PagingAndSortingRepository<Operacao, Long> {
 }
