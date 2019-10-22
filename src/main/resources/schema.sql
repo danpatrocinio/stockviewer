@@ -19,3 +19,20 @@ CREATE TABLE IF NOT EXISTS operacao (
   valor_unitario    DECIMAL(10,2),
   corretora         VARCHAR(30)
 );
+
+DROP TABLE IF EXISTS carteira;
+
+CREATE TABLE IF NOT EXISTS carteira (
+  id_carteira       INT NOT NULL PRIMARY KEY,
+  valor_custo       DECIMAL(10,2),
+  valor_mercado     DECIMAL(10,2)
+);
+
+DROP TABLE IF EXISTS ativo_carteira;
+
+CREATE TABLE IF NOT EXISTS ativo_carteira (
+  id_ativo_carteira INT NOT NULL PRIMARY KEY,
+  id_ativo          INT,
+  quantidade        INT,
+  preco_medio       DECIMAL(10,2)
+);

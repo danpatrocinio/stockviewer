@@ -25,10 +25,7 @@ import java.math.BigDecimal;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class LeitorGoogleSheets {
 
@@ -70,6 +67,16 @@ public class LeitorGoogleSheets {
         return Integer.parseInt(value);
     }
 
+    private static Date getDataHora(Object v) throws ParseException {
+        if (v == null) return null;
+        return SDF_HM.parse(v.toString());
+    }
+
+    private static Date getData(Object v) throws ParseException {
+        if (v == null) return null;
+        return SDF_DT.parse(v.toString());
+    }
+
     public static List<Operacao> getLinhas() throws IOException, GeneralSecurityException, ParseException {
         sheetsService = getSheetsService();
         ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE).execute();
@@ -89,12 +96,11 @@ public class LeitorGoogleSheets {
                 tipo = TipoOperacao.getTipoByValue(row.get(1).toString());
                 ativo = new Ativo();
                 ativo.setTicker(row.get(3).toString());
-                ativo.setNome(row.get(8).toString());
-                ativo.setCotacao(getBigDecimal(row.get(9).toString()));
+                ativo.setNome(row.size() >= 9 ? row.get(8).toString() : null);
+                ativo.setCotacao(row.size() >= 10 ? getBigDecimal(row.get(9)) : null);
                 corretora = Corretora.getCorretoraByValue(row.get(6).toString());
-                operacoes.add(new Operacao(SDF_HM.parse(row.get(0).toString()), tipo,
-                        SDF_DT.parse(row.get(2).toString()), ativo, getInteger(row.get(4)),
-                        getBigDecimal(row.get(5)), corretora));
+                operacoes.add(new Operacao(getDataHora(row.get(0)), tipo, getData(row.get(2)), ativo,
+                        getInteger(row.get(4)), getBigDecimal(row.get(5)), corretora));
             }
             return operacoes;
         }
