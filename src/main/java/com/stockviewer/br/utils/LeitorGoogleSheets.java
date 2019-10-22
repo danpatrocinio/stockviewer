@@ -83,12 +83,13 @@ public class LeitorGoogleSheets {
             Ativo ativo;
             TipoOperacao tipo;
             Corretora corretora;
-            //System.out.println("Data/Hora           | V/C    | Data       | Ticker | Qt | Valor un. | Corretora");
             for (List row : values) {
                 if (row.get(0).toString().startsWith("Carimbo")) continue;
-                //System.out.printf("%s | %s | %s | %s | %s | %s | %s \n", row.get(0), row.get(1), row.get(2), row.get(3), row.get(4), row.get(5), row.get(6));
                 tipo = TipoOperacao.getTipoByValue(row.get(1).toString());
-                ativo = new Ativo(row.get(3).toString(), row.get(8).toString(), getBigDecimal(row.get(9).toString()));
+                ativo = new Ativo();
+                ativo.setTicker(row.get(3).toString());
+                ativo.setNome(row.get(8).toString());
+                ativo.setCotacao(getBigDecimal(row.get(9).toString()));
                 corretora = Corretora.getCorretoraByValue(row.get(6).toString());
                 operacoes.add(new Operacao(SDF_HM.parse(row.get(0).toString()), tipo, SDF_DT.parse(row.get(2).toString()),
                         ativo, getInteger(row.get(4)), getBigDecimal(row.get(5)),
