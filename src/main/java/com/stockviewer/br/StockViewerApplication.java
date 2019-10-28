@@ -72,13 +72,15 @@ public class StockViewerApplication {
         /*
         SELECT * FROM (
              select operacao.id_ativo, ticker,
-             sum(case when (tipo = 0) then quantidade else (-1 * quantidade ) end) as quantidade,
-             sum(case when (tipo = 0) then (valor_unitario * quantidade) else (-1 * valor_unitario * quantidade ) end) as total_custo,
-             sum(case when (tipo = 0) then (ativo.cotacao * quantidade) else (-1 * ativo.cotacao * quantidade ) end) as total_mercado
+             sum(case when (tipo = 0 or tipo = 3) then quantidade else (-1 * quantidade ) end) as quantidade,
+             sum(case when (tipo = 0 or tipo = 3) then (valor_unitario * quantidade) else (-1 * valor_unitario * quantidade ) end) as total_custo,
+             sum(case when (tipo = 0 or tipo = 3) then (ativo.cotacao * quantidade) else (-1 * ativo.cotacao * quantidade ) end) as total_mercado
             from operacao
             join ativo on (ativo.id_ativo=operacao.id_ativo)
             group by operacao.id_ativo)
         WHERE total_mercado > 0;
+
+        SELECT * FROM OPERACAO where id_ativo=(select id_ativo from ativo where ticker='GGRC11') order by data desc
          */
 
         Ativo ativo;
