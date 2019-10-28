@@ -91,9 +91,9 @@ public class StockViewerApplication {
                 valorMercado = valorMercado.multiply(new BigDecimal(-1));
                 addVenda(carteira, ativo, quantidade, valorOperacao);
             } else if (TipoOperacao.AGRUPAMENTO.equals(tipoOperacao)) {
-                addAgrupamento(carteira, ativo);
+                addAgrupamento(carteira, ativo, quantidade);
             } else if (TipoOperacao.DESDOBRAMENTO.equals(tipoOperacao)) {
-                addDesdobramento(carteira, ativo);
+                addDesdobramento(carteira, ativo, quantidade);
             }
             carteira.setValorMercado(carteira.getValorMercado().add(valorMercado));
             carteira.setValorCusto(carteira.getValorCusto().add(valorOperacao));
@@ -119,7 +119,7 @@ public class StockViewerApplication {
     }
 
     private void addVenda(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade, BigDecimal valorOperacao) {
-        Integer quantidadeNova = 0;
+        Integer quantidadeNova;
 
         for (AtivoCarteira emCarteira: carteira.getAtivos()) {
             if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
@@ -134,11 +134,28 @@ public class StockViewerApplication {
         }
     }
 
-    private void addAgrupamento(CarteiraConsolidada carteira, Ativo ativo) {
+    private void addAgrupamento(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade) {
+        Integer quantidadeNova;
 
+        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
+            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
+                quantidadeNova = emCarteira.getQuantidade() - quantidade;
+                if (quantidadeNova.compareTo(0) == 0) {
+                    carteira.getAtivos().remove(emCarteira);
+                    return;
+                }
+                emCarteira.setQuantidade(quantidadeNova);
+                return;
+            }
+        }
     }
 
-    private void addDesdobramento(CarteiraConsolidada carteira, Ativo ativo) {
-
+    private void addDesdobramento(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade) {
+        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
+            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
+                emCarteira.setQuantidade(emCarteira.getQuantidade() + quantidade);
+                return;
+            }
+        }
     }
 }
