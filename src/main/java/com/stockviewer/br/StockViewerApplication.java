@@ -69,6 +69,18 @@ public class StockViewerApplication {
     private void consolidarCarteira(OperacaoRepository operacaoRepository, CarteiraConsolidadaRepository carteiraRepository) {
         log.info("\n\n\t\t\t\t\t\t [ Consolidando carteira ]\n");
 
+        /*
+        SELECT * FROM (
+             select operacao.id_ativo, ticker,
+             sum(case when (tipo = 0) then quantidade else (-1 * quantidade ) end) as quantidade,
+             sum(case when (tipo = 0) then (valor_unitario * quantidade) else (-1 * valor_unitario * quantidade ) end) as total_custo,
+             sum(case when (tipo = 0) then (ativo.cotacao * quantidade) else (-1 * ativo.cotacao * quantidade ) end) as total_mercado
+            from operacao
+            join ativo on (ativo.id_ativo=operacao.id_ativo)
+            group by operacao.id_ativo)
+        WHERE total_mercado > 0;
+         */
+
         Ativo ativo;
         TipoOperacao tipoOperacao;
         Integer quantidade;
