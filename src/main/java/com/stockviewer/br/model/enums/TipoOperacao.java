@@ -2,11 +2,13 @@ package com.stockviewer.br.model.enums;
 
 public enum TipoOperacao {
 
-    COMPRA("C", "Compra"), VENDA("V", "Venda");
+    COMPRA("C", "Compra"),
+    VENDA("V", "Venda"),
+    AGRUPAMENTO("A", "Agrupamento"),
+    DESDOBRAMENTO("D", "Desdobramento");
 
     private String tipo;
     private String descricao;
-
 
     TipoOperacao(String tipo, String descricao) {
         this.tipo = tipo;

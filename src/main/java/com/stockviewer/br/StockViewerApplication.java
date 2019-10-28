@@ -6,6 +6,7 @@ import com.stockviewer.br.model.CarteiraConsolidada;
 import com.stockviewer.br.model.Operacao;
 import com.stockviewer.br.model.enums.TipoOperacao;
 import com.stockviewer.br.repository.AtivoRepository;
+import com.stockviewer.br.repository.CarteiraConsolidadaRepository;
 import com.stockviewer.br.repository.OperacaoRepository;
 import com.stockviewer.br.utils.LeitorGoogleSheets;
 import org.slf4j.Logger;
@@ -34,10 +35,10 @@ public class StockViewerApplication {
     }
 
     @Bean
-    public CommandLineRunner populateApiData(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository) {
+    public CommandLineRunner populateApiData(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository, CarteiraConsolidadaRepository carteiraRepository) {
         return (args) -> {
             buscarDados(operacaoRepository, ativoRepository);
-            consolidarCarteira(operacaoRepository, ativoRepository);
+            consolidarCarteira(operacaoRepository, carteiraRepository);
         };
     }
 
@@ -58,37 +59,86 @@ public class StockViewerApplication {
                 ativoSaved = ativoRepository.findByTicker(operacao.getAtivo().getTicker());
             }
             operacao.setAtivo(ativoSaved);
+            operacao.setTipo(operacao.getTipo());
             operacaoRepository.save(operacao);
         }
 
         log.info("\n\n\t\t\t\t\t\t [ " + count + " linhas de operações carregadas ]\n");
     }
 
-    private void consolidarCarteira(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository) {
+    private void consolidarCarteira(OperacaoRepository operacaoRepository, CarteiraConsolidadaRepository carteiraRepository) {
         log.info("\n\n\t\t\t\t\t\t [ Consolidando carteira ]\n");
 
-        Map<String, Operacao> consolidado = new HashMap<>();
+        Ativo ativo;
+        TipoOperacao tipoOperacao;
+        Integer quantidade;
+        BigDecimal valorOperacao;
+        BigDecimal valorMercado;
         CarteiraConsolidada carteira = new CarteiraConsolidada();
-        int count = 0;
-        for (Operacao operacao : operacaoRepository.findAll()) {
-            String ticker = operacao.getAtivo().getTicker();
-            Integer quantidade = operacao.getQuantidade();
-            BigDecimal valor = operacao.getValorUnitario().multiply(new BigDecimal(quantidade));
-            if (operacao.getTipo().equals(TipoOperacao.VENDA)) {
-                quantidade = quantidade * -1;
-                valor = valor.multiply(new BigDecimal(-1));
+        carteira.setAtivos(new ArrayList<>());
+        carteira.setValorCusto(BigDecimal.ZERO);
+        carteira.setValorMercado(BigDecimal.ZERO);
+        for (Operacao operacao : operacaoRepository.findByOrderByDataAsc()) {
+            ativo = operacao.getAtivo();
+            tipoOperacao = operacao.getTipo();
+            quantidade = operacao.getQuantidade();
+            valorOperacao = operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade()));
+            valorMercado = operacao.getAtivo().getCotacao().multiply(new BigDecimal(quantidade));
+            if (TipoOperacao.COMPRA.equals(tipoOperacao)) {
+                addCompra(carteira, ativo, quantidade, valorOperacao);
+            } else if (TipoOperacao.VENDA.equals(tipoOperacao)) {
+                valorOperacao = valorOperacao.multiply(new BigDecimal(-1));
+                valorMercado = valorMercado.multiply(new BigDecimal(-1));
+                addVenda(carteira, ativo, quantidade, valorOperacao);
+            } else if (TipoOperacao.AGRUPAMENTO.equals(tipoOperacao)) {
+                addAgrupamento(carteira, ativo);
+            } else if (TipoOperacao.DESDOBRAMENTO.equals(tipoOperacao)) {
+                addDesdobramento(carteira, ativo);
             }
-            if (consolidado.containsKey(ticker)) {
+            carteira.setValorMercado(carteira.getValorMercado().add(valorMercado));
+            carteira.setValorCusto(carteira.getValorCusto().add(valorOperacao));
+        }
 
-            } else {
-                Operacao op = new Operacao();
-                Ativo at = new Ativo();
-                at.setTicker(ticker);
-                at.setNome(operacao.getAtivo().getNome());
-                op.setAtivo(at);
+        carteiraRepository.save(carteira);
+
+        log.info("\n\n\t\t\t\t\t\t [ " + carteira.getAtivos().size() + " ativos em carteira ]\n");
+    }
+
+    private void addCompra(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade, BigDecimal valorOperacao) {
+        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
+            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
+                emCarteira.setQuantidade(emCarteira.getQuantidade() + quantidade);
+                return;
             }
         }
-        carteira.setAtivos(new ArrayList<>());
-        log.info("\n\n\t\t\t\t\t\t [ " + count + " ativos em carteira ]\n");
+        AtivoCarteira ativoCarteira = new AtivoCarteira();
+        ativoCarteira.setAtivo(ativo);
+        ativoCarteira.setPrecoMedio(valorOperacao);
+        ativoCarteira.setQuantidade(quantidade);
+        carteira.getAtivos().add(ativoCarteira);
+    }
+
+    private void addVenda(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade, BigDecimal valorOperacao) {
+        Integer quantidadeNova = 0;
+
+        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
+            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
+                quantidadeNova = emCarteira.getQuantidade() - quantidade;
+                if (quantidadeNova.compareTo(0) == 0) {
+                    carteira.getAtivos().remove(emCarteira);
+                    return;
+                }
+                emCarteira.setQuantidade(quantidadeNova);
+                return;
+            }
+        }
+    }
+
+    private void addAgrupamento(CarteiraConsolidada carteira, Ativo ativo) {
+
+    }
+
+    private void addDesdobramento(CarteiraConsolidada carteira, Ativo ativo) {
+
     }
 }
