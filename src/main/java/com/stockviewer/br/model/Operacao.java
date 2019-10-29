@@ -13,7 +13,8 @@ public class Operacao {
 
     @Id
     @Column(name = "id_operacao")
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.SEQUENCE, generator="operacao_seq")
+    @SequenceGenerator(name="operacao_seq", sequenceName="ope_seq")
     private Long id;
     @Column(name = "carimbo_data_hora")
     private Date carimboDataHora;

@@ -10,7 +10,8 @@ public class CarteiraConsolidada {
 
     @Id
     @Column(name = "id_carteira")
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.SEQUENCE, generator="carteira_consolidada_seq")
+    @SequenceGenerator(name="carteira_consolidada_seq", sequenceName="car_seq")
     private Long id;
 
     @JoinColumn(name = "id_carteira")

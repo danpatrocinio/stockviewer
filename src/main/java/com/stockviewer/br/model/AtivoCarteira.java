@@ -9,7 +9,8 @@ public class AtivoCarteira {
 
     @Id
     @Column(name="id_ativo_carteira")
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.SEQUENCE, generator="ativo_carteira_seq")
+    @SequenceGenerator(name="ativo_carteira_seq", sequenceName="atc_seq")
     private Integer idAtivoCarteira;
 
     @ManyToOne

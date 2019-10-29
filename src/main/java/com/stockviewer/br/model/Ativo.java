@@ -9,7 +9,8 @@ public class Ativo {
 
     @Id
     @Column(name = "id_ativo")
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.SEQUENCE, generator="ativo_seq")
+    @SequenceGenerator(name="ativo_seq", sequenceName="ati_seq")
     private Long id;
     @Column(length = 7, unique = true, nullable = false)
     private String ticker;
