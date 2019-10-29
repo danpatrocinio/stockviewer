@@ -21,15 +21,13 @@ import java.math.BigDecimal;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import static com.stockviewer.br.utils.StockViewerUtils.*;
 
 @SpringBootApplication
 public class StockViewerApplication {
 
     private static final Logger log = LoggerFactory.getLogger(StockViewerApplication.class);
-
     public static void main(String[] args) {
         SpringApplication.run(StockViewerApplication.class, args);
     }
@@ -38,7 +36,7 @@ public class StockViewerApplication {
     public CommandLineRunner populateApiData(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository, CarteiraConsolidadaRepository carteiraRepository) {
         return (args) -> {
             buscarDados(operacaoRepository, ativoRepository);
-            consolidarCarteira(operacaoRepository, carteiraRepository);
+            consolidarCarteira(operacaoRepository, ativoRepository, carteiraRepository);
         };
     }
 
@@ -66,13 +64,14 @@ public class StockViewerApplication {
         log.info("\n\n\t\t\t\t\t\t [ " + count + " linhas de operações carregadas ]\n");
     }
 
-    private void consolidarCarteira(OperacaoRepository operacaoRepository, CarteiraConsolidadaRepository carteiraRepository) {
+    private void consolidarCarteira(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository, CarteiraConsolidadaRepository carteiraRepository) {
         log.info("\n\n\t\t\t\t\t\t [ Consolidando carteira ]\n");
-
         /*
         SELECT * FROM (
              select operacao.id_ativo, ticker,
              sum(case when (tipo = 0 or tipo = 3) then quantidade else (-1 * quantidade ) end) as quantidade,
+             ROUND(case when (sum(case when (tipo = 0 or tipo = 3) then quantidade else (-1 * quantidade ) end) > 0) then
+                    (sum(case when (tipo = 0 or tipo = 3) then (valor_unitario * quantidade) else (-1 * valor_unitario * quantidade ) end) / sum(case when (tipo = 0 or tipo = 3) then quantidade else (-1 * quantidade ) end)) end, 2) as preco_medio,
              sum(case when (tipo = 0 or tipo = 3) then (valor_unitario * quantidade) else (-1 * valor_unitario * quantidade ) end) as total_custo,
              sum(case when (tipo = 0 or tipo = 3) then (ativo.cotacao * quantidade) else (-1 * ativo.cotacao * quantidade ) end) as total_mercado
             from operacao
@@ -80,96 +79,27 @@ public class StockViewerApplication {
             group by operacao.id_ativo)
         WHERE total_mercado > 0;
 
-        SELECT * FROM OPERACAO where id_ativo=(select id_ativo from ativo where ticker='GGRC11') order by data desc
          */
 
-        Ativo ativo;
-        TipoOperacao tipoOperacao;
-        Integer quantidade;
-        BigDecimal valorOperacao;
-        BigDecimal valorMercado;
         CarteiraConsolidada carteira = new CarteiraConsolidada();
         carteira.setAtivos(new ArrayList<>());
         carteira.setValorCusto(BigDecimal.ZERO);
         carteira.setValorMercado(BigDecimal.ZERO);
-        for (Operacao operacao : operacaoRepository.findByOrderByDataAsc()) {
-            ativo = operacao.getAtivo();
-            tipoOperacao = operacao.getTipo();
-            quantidade = operacao.getQuantidade();
-            valorOperacao = operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade()));
-            valorMercado = operacao.getAtivo().getCotacao().multiply(new BigDecimal(quantidade));
-            if (TipoOperacao.COMPRA.equals(tipoOperacao)) {
-                addCompra(carteira, ativo, quantidade, valorOperacao);
-            } else if (TipoOperacao.VENDA.equals(tipoOperacao)) {
-                valorOperacao = valorOperacao.multiply(new BigDecimal(-1));
-                valorMercado = valorMercado.multiply(new BigDecimal(-1));
-                addVenda(carteira, ativo, quantidade, valorOperacao);
-            } else if (TipoOperacao.AGRUPAMENTO.equals(tipoOperacao)) {
-                addAgrupamento(carteira, ativo, quantidade);
-            } else if (TipoOperacao.DESDOBRAMENTO.equals(tipoOperacao)) {
-                addDesdobramento(carteira, ativo, quantidade);
-            }
-            carteira.setValorMercado(carteira.getValorMercado().add(valorMercado));
-            carteira.setValorCusto(carteira.getValorCusto().add(valorOperacao));
+        AtivoCarteira ativoCarteira;
+        for (Object[] row : carteiraRepository.consolidaCarteira()) {
+//            System.out.println(String.format("ativo: %d-%s, quantidade: %d, preco_medio: %.2f, total_custo: %.2f, total_mercado: %.2f ",
+//                    getInteger(row[0]), getStr(row[1]), getInteger(row[2]), getBigDecimal(row[3]), getBigDecimal(row[4]), getBigDecimal(row[5])));
+            ativoCarteira = new AtivoCarteira();
+            ativoCarteira.setAtivo(ativoRepository.findByTicker(getStr(row[1])));
+            ativoCarteira.setQuantidade(getInteger(row[2]));
+            ativoCarteira.setPrecoMedio(getBigDecimal(row[3]));
+            carteira.getAtivos().add(ativoCarteira);
+            carteira.setValorCusto(carteira.getValorCusto().add(ativoCarteira.getPrecoMedio().multiply(getBigDecimal(row[2]))));
+            carteira.setValorMercado(carteira.getValorMercado().add(ativoCarteira.getAtivo().getCotacao().multiply(getBigDecimal(row[2]))));
         }
-
         carteiraRepository.save(carteira);
 
         log.info("\n\n\t\t\t\t\t\t [ " + carteira.getAtivos().size() + " ativos em carteira ]\n");
     }
 
-    private void addCompra(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade, BigDecimal valorOperacao) {
-        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
-            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
-                emCarteira.setQuantidade(emCarteira.getQuantidade() + quantidade);
-                return;
-            }
-        }
-        AtivoCarteira ativoCarteira = new AtivoCarteira();
-        ativoCarteira.setAtivo(ativo);
-        ativoCarteira.setPrecoMedio(valorOperacao);
-        ativoCarteira.setQuantidade(quantidade);
-        carteira.getAtivos().add(ativoCarteira);
-    }
-
-    private void addVenda(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade, BigDecimal valorOperacao) {
-        Integer quantidadeNova;
-
-        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
-            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
-                quantidadeNova = emCarteira.getQuantidade() - quantidade;
-                if (quantidadeNova.compareTo(0) == 0) {
-                    carteira.getAtivos().remove(emCarteira);
-                    return;
-                }
-                emCarteira.setQuantidade(quantidadeNova);
-                return;
-            }
-        }
-    }
-
-    private void addAgrupamento(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade) {
-        Integer quantidadeNova;
-
-        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
-            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
-                quantidadeNova = emCarteira.getQuantidade() - quantidade;
-                if (quantidadeNova.compareTo(0) == 0) {
-                    carteira.getAtivos().remove(emCarteira);
-                    return;
-                }
-                emCarteira.setQuantidade(quantidadeNova);
-                return;
-            }
-        }
-    }
-
-    private void addDesdobramento(CarteiraConsolidada carteira, Ativo ativo, Integer quantidade) {
-        for (AtivoCarteira emCarteira: carteira.getAtivos()) {
-            if (emCarteira.getAtivo().getTicker().equals(ativo.getTicker())) {
-                emCarteira.setQuantidade(emCarteira.getQuantidade() + quantidade);
-                return;
-            }
-        }
-    }
 }

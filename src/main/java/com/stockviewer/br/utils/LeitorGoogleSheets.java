@@ -21,19 +21,20 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static com.stockviewer.br.utils.StockViewerUtils.*;
 
 public class LeitorGoogleSheets {
 
     private static Sheets sheetsService;
     private static String APPLICATION_NAME = "Operacoes Bolsa";
     private static String SHEET_RANGE = "Notas!A:J"; // Colunas recuperadas
-    private static SimpleDateFormat SDF_HM = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
-    private static SimpleDateFormat SDF_DT = new SimpleDateFormat("dd/MM/yyyy");
     private static String SPREADSHEET_ID = "1FRxQbvAVoD_M5QeyQxjGK7P3GlgAUmAl3_hROYsXu7E";
     private static final Logger log = LoggerFactory.getLogger(LeitorGoogleSheets.class);
 
@@ -54,27 +55,6 @@ public class LeitorGoogleSheets {
         Credential credential = authorize();
         return new Sheets.Builder(GoogleNetHttpTransport.newTrustedTransport(),
                 JacksonFactory.getDefaultInstance(), credential).setApplicationName(APPLICATION_NAME).build();
-    }
-
-    private static BigDecimal getBigDecimal(Object v) {
-        if (v == null) return null;
-        String value = v.toString().toUpperCase().replace("R$","").replace(",", ".").trim();
-        return new BigDecimal(value);
-    }
-    private static Integer getInteger(Object v) {
-        if (v == null) return null;
-        String value = v.toString().toUpperCase().replace("R$","").replace(",", ".").trim();
-        return Integer.parseInt(value);
-    }
-
-    private static Date getDataHora(Object v) throws ParseException {
-        if (v == null) return null;
-        return SDF_HM.parse(v.toString());
-    }
-
-    private static Date getData(Object v) throws ParseException {
-        if (v == null) return null;
-        return SDF_DT.parse(v.toString());
     }
 
     public static List<Operacao> getLinhas() throws IOException, GeneralSecurityException, ParseException {
