@@ -86,9 +86,10 @@ public class StockViewerApplication {
         carteira.setValorCusto(BigDecimal.ZERO);
         carteira.setValorMercado(BigDecimal.ZERO);
         AtivoCarteira ativoCarteira;
+        System.out.println("  ATIVO   | QTD |  PM  |  CUSTO  | MERCADO ");
         for (Object[] row : carteiraRepository.consolidaCarteira()) {
-//            System.out.println(String.format("ativo: %d-%s, quantidade: %d, preco_medio: %.2f, total_custo: %.2f, total_mercado: %.2f ",
-//                    getInteger(row[0]), getStr(row[1]), getInteger(row[2]), getBigDecimal(row[3]), getBigDecimal(row[4]), getBigDecimal(row[5])));
+            System.out.println(String.format("%d-%s | %d | %.2f | %.2f | %.2f ",
+                    getInteger(row[0]), getStr(row[1]), getInteger(row[2]), getBigDecimal(row[3]), getBigDecimal(row[4]), getBigDecimal(row[5])));
             ativoCarteira = new AtivoCarteira();
             ativoCarteira.setAtivo(ativoRepository.findByTicker(getStr(row[1])));
             ativoCarteira.setQuantidade(getInteger(row[2]));
@@ -97,6 +98,7 @@ public class StockViewerApplication {
             carteira.setValorCusto(carteira.getValorCusto().add(ativoCarteira.getPrecoMedio().multiply(getBigDecimal(row[2]))));
             carteira.setValorMercado(carteira.getValorMercado().add(ativoCarteira.getAtivo().getCotacao().multiply(getBigDecimal(row[2]))));
         }
+        System.out.println(" ");
         carteiraRepository.save(carteira);
 
         log.info("\n\n\t\t\t\t\t\t [ " + carteira.getAtivos().size() + " ativos em carteira ]\n");
