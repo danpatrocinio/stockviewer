@@ -19,6 +19,8 @@ public class AtivoCarteira {
 
     private Integer quantidade;
 
+    private BigDecimal cotacao;
+
     private BigDecimal precoMedio;
 
     public Integer getIdAtivoCarteira() {
@@ -43,6 +45,14 @@ public class AtivoCarteira {
 
     public void setQuantidade(Integer quantidade) {
         this.quantidade = quantidade;
+    }
+
+    public BigDecimal getCotacao() {
+        return cotacao;
+    }
+
+    public void setCotacao(BigDecimal cotacao) {
+        this.cotacao = cotacao;
     }
 
     public BigDecimal getPrecoMedio() {
