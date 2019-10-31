@@ -22,6 +22,9 @@ import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 import static com.stockviewer.br.utils.StockViewerUtils.*;
 
@@ -38,6 +41,7 @@ public class StockViewerApplication {
         return (args) -> {
             buscarDados(operacaoRepository, ativoRepository);
             consolidarCarteira(ativoRepository, carteiraRepository);
+            consolidaAportes(operacaoRepository);
         };
     }
 
@@ -62,7 +66,7 @@ public class StockViewerApplication {
             operacaoRepository.save(operacao);
         }
 
-        log(count + " linhas de operações carregadas");
+        log(count + " operações carregadas");
     }
 
     private void consolidarCarteira(AtivoRepository ativoRepository, CarteiraConsolidadaRepository carteiraRepository) {
@@ -88,10 +92,57 @@ public class StockViewerApplication {
             carteira.setValorMercado(carteira.getValorMercado().add(ativoCarteira.getAtivo().getCotacao().multiply(getBigDecimal(row[2]))));
             showCarteira(++i, row, ativoCarteira);
         }
-        System.out.println(" ");
+
         carteiraRepository.save(carteira);
 
+        BigDecimal retorno = carteira.getValorMercado().divide(carteira.getValorCusto(), RoundingMode.HALF_UP)
+                .subtract(new BigDecimal(1)).multiply(new BigDecimal(100));
+        System.out.println(String.format("%s |%s |%s | %s | %s | %s | %s | %s",
+                mountStr(" ", 3),
+                mountStr(" ", 7),
+                mountStr(" ", 6),
+                mountStr(" ", 11),
+                mountStr(" ", 11),
+                mountStr(carteira.getValorCusto(), 11),
+                mountStr(carteira.getValorMercado(), 16),
+                mountStr(retorno.toString().replace(".00", " %"), 6)));
+
         log( carteira.getAtivos().size() + " ativos em carteira");
+    }
+
+    private void consolidaAportes(OperacaoRepository operacaoRepository) {
+
+        log("Aportes mensais");
+
+        int i = 0;
+        String mesAno = null;
+        BigDecimal aporte = BigDecimal.ZERO;
+        BigDecimal totalAportes = BigDecimal.ZERO;
+        System.out.println("  # |            MÊS |     APORTE");
+        for (Operacao operacao : operacaoRepository.findByOrderByDataAsc()) {
+            if (mesAno == null) {
+                mesAno = getMesAno(operacao.getData());
+            }
+            if (mesAno.equals(getMesAno(operacao.getData()))) {
+                aporte = TipoOperacao.COMPRA.equals(operacao.getTipo()) ?
+                        aporte.add(operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade()))) :
+                        aporte.subtract(operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade())));
+                continue;
+            }
+            i++;
+            System.out.println(String.format("%s |%s |%s ", "   ", mountStr(mesAno, 15), mountStr(aporte, 11)));
+            totalAportes = totalAportes.add(aporte);
+            mesAno = getMesAno(operacao.getData());
+            aporte = TipoOperacao.COMPRA.equals(operacao.getTipo()) ?
+                    operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade())) :
+                    new BigDecimal(-1).multiply(operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade())));
+            totalAportes = totalAportes.add(aporte);
+        }
+        i++;
+        System.out.println(String.format("%s |%s |%s ", "   ", mountStr(mesAno, 15), mountStr(aporte, 11)));
+        System.out.println();
+
+        log(i + " meses operados no valor total " + totalAportes);
     }
 
     private void showCarteira(int i, Object[] row, AtivoCarteira ativoCarteira) {
@@ -120,6 +171,12 @@ public class StockViewerApplication {
         }
         sb.append(v.toString());
         return sb.toString();
+    }
+
+    private String getMesAno(Date data) {
+        Calendar cal = new GregorianCalendar();
+        cal.setTime(data);
+        return getMes(cal.get(Calendar.MONTH)) + "/" + cal.get(Calendar.YEAR);
     }
 
     private void log(String msg) {
