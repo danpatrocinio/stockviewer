@@ -161,24 +161,6 @@ public class StockViewerApplication {
                 mountStr(retorno.toString().replace(".00", " %"), 6)));
     }
 
-    private static String mountStr(Object v, int tam) {
-        String espacos = "                              "; // length = 30
-        if (v == null) return espacos.substring(0, tam);
-
-        StringBuilder sb = new StringBuilder();
-        while (sb.length() < tam - v.toString().length()) {
-            sb.append(' ');
-        }
-        sb.append(v.toString());
-        return sb.toString();
-    }
-
-    private String getMesAno(Date data) {
-        Calendar cal = new GregorianCalendar();
-        cal.setTime(data);
-        return getMes(cal.get(Calendar.MONTH)) + "/" + cal.get(Calendar.YEAR);
-    }
-
     private void log(String msg) {
         log.info(String.format("\n\n\t\t\t [ %s ]\n", msg));
     }
