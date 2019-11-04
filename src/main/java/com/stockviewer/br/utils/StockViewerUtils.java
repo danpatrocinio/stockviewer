@@ -15,6 +15,9 @@ public class StockViewerUtils {
     public static BigDecimal getBigDecimal(Object v) {
         if (v == null) return null;
         String value = v.toString().toUpperCase().replace("R$","").replace(",", ".").trim();
+        if (value.length() > 2 && ".".equals(value.substring(value.length()-2, value.length()-1))) {
+            value = value + "0";
+        }
         return new BigDecimal(value);
     }
 

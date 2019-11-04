@@ -22,9 +22,6 @@ import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
 
 import static com.stockviewer.br.utils.StockViewerUtils.*;
 
