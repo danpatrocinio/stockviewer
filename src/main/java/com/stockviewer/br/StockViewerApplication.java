@@ -22,6 +22,8 @@ import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static com.stockviewer.br.utils.StockViewerUtils.*;
 
@@ -111,35 +113,33 @@ public class StockViewerApplication {
 
         log("Aportes mensais");
 
-        int i = 0;
-        String mesAno = null;
-        BigDecimal aporte = BigDecimal.ZERO;
-        BigDecimal totalAportes = BigDecimal.ZERO;
+        String mesAno;
+        BigDecimal aporte;
+        LinkedHashMap<String, BigDecimal> aporteMap = getInitialMap();
         System.out.println("  # |            MÊS |     APORTE");
         for (Operacao operacao : operacaoRepository.findByOrderByDataAsc()) {
-            if (mesAno == null) {
-                mesAno = getMesAno(operacao.getData());
-            }
-            if (mesAno.equals(getMesAno(operacao.getData()))) {
-                aporte = TipoOperacao.COMPRA.equals(operacao.getTipo()) ?
-                        aporte.add(operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade()))) :
-                        aporte.subtract(operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade())));
-                continue;
-            }
-            i++;
-            System.out.println(String.format("%s |%s |%s ", "   ", mountStr(mesAno, 15), mountStr(aporte, 11)));
-            totalAportes = totalAportes.add(aporte);
+            BigDecimal vlOperacao = operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade()));
             mesAno = getMesAno(operacao.getData());
-            aporte = TipoOperacao.COMPRA.equals(operacao.getTipo()) ?
-                    operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade())) :
-                    new BigDecimal(-1).multiply(operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade())));
-            totalAportes = totalAportes.add(aporte);
+            aporte = aporteMap.get(mesAno);
+            aporte = TipoOperacao.COMPRA.equals(operacao.getTipo()) ? aporte.add(vlOperacao) : aporte.subtract(vlOperacao);
+            aporteMap.put(mesAno, aporte);
         }
-        i++;
-        System.out.println(String.format("%s |%s |%s ", "   ", mountStr(mesAno, 15), mountStr(aporte, 11)));
+
+        int i = 0;
+        int naoOperados = 0;
+        BigDecimal totalAportes = BigDecimal.ZERO;
+        for (Map.Entry<String, BigDecimal> aporteMes :  aporteMap.entrySet()) {
+            if (aporteMes.getValue().compareTo(BigDecimal.ZERO) > 0) {
+                ++i;
+            } else {
+                ++naoOperados;
+            }
+            totalAportes = totalAportes.add(aporteMes.getValue());
+            System.out.println(String.format("%s |%s |%s ", "   ", mountStr(aporteMes.getKey(), 15), mountStr(aporteMes.getValue(), 11)));
+        }
         System.out.println();
 
-        log(i + " meses operados no valor total " + totalAportes);
+        log("meses operados: " + i + " | não operados: " + naoOperados + " | valor total: " + totalAportes + " | média mensal: " + totalAportes.divide(new BigDecimal(aporteMap.size()), RoundingMode.HALF_EVEN));
     }
 
     private void showCarteira(int i, Object[] row, AtivoCarteira ativoCarteira) {
