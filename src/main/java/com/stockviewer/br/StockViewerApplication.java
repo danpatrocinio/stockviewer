@@ -106,6 +106,7 @@ public class StockViewerApplication {
                 mountStr(carteira.getValorMercado(), 16),
                 mountStr(retorno.toString().replace(".00", " %"), 6)));
 
+        System.out.println();
         log( carteira.getAtivos().size() + " ativos em carteira");
     }
 
@@ -135,7 +136,8 @@ public class StockViewerApplication {
                 ++naoOperados;
             }
             totalAportes = totalAportes.add(aporteMes.getValue());
-            System.out.println(String.format("%s |%s |%s ", "   ", mountStr(aporteMes.getKey(), 15), mountStr(aporteMes.getValue(), 11)));
+            System.out.println(String.format("%s |%s |%s |%s ", "   ", mountStr(aporteMes.getKey(), 15), mountStr(aporteMes.getValue(), 11),
+                    relevancia(getBigDecimal(aporteMes.getValue()))));
         }
         System.out.println();
 
@@ -147,7 +149,7 @@ public class StockViewerApplication {
         BigDecimal retorno = ativoCarteira.getCotacao().divide(ativoCarteira.getPrecoMedio(), RoundingMode.HALF_UP)
                 .subtract(new BigDecimal(1)).multiply(new BigDecimal(100));
 
-        System.out.println(String.format("%s |%s |%s | %s | %s | %s | %s | %s",
+        System.out.println(String.format("%s |%s |%s | %s | %s | %s | %s | %s | %s",
                 mountStr(i, 3),
                 mountStr(ativoCarteira.getAtivo().getTicker(), 7),
                 mountStr(ativoCarteira.getQuantidade(), 6),
@@ -155,7 +157,20 @@ public class StockViewerApplication {
                 mountStr(ativoCarteira.getCotacao(), 11),
                 mountStr(getBigDecimal(row[4]), 11),
                 mountStr(getBigDecimal(row[5]), 16),
-                mountStr(retorno.toString().replace(".00", " %"), 6)));
+                mountStr(retorno.toString().replace(".00", " %"), 6),
+                relevancia(getBigDecimal(row[5]))));
+    }
+
+    private String relevancia(BigDecimal valor) {
+
+        if (valor == null || BigDecimal.ZERO.compareTo(valor) >= 0) return "";
+        StringBuilder barras = new StringBuilder("");
+        BigDecimal cem = new BigDecimal(100);
+        while (valor.compareTo(cem) >= 0) {
+            barras.append("|");
+            valor = valor.subtract(cem);
+        }
+        return barras.toString();
     }
 
     private void log(String msg) {
