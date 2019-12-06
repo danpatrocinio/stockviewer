@@ -161,18 +161,6 @@ public class StockViewerApplication {
                 relevancia(getBigDecimal(row[5]))));
     }
 
-    private String relevancia(BigDecimal valor) {
-
-        if (valor == null || BigDecimal.ZERO.compareTo(valor) >= 0) return "";
-        StringBuilder barras = new StringBuilder("");
-        BigDecimal cem = new BigDecimal(100);
-        while (valor.compareTo(cem) >= 0) {
-            barras.append("|");
-            valor = valor.subtract(cem);
-        }
-        return barras.toString();
-    }
-
     private void log(String msg) {
         log.info(String.format("\n\n\t\t\t [ %s ]\n", msg));
     }

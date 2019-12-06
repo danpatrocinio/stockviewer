@@ -95,12 +95,18 @@ public class StockViewerUtils {
             mesAporte++;
         }
         map.put(getMes(MES_ATUAL) + "/" + ANO_ATUAL, BigDecimal.ZERO);
-
-//        for (Map.Entry<String, BigDecimal> mesano : map.entrySet()) {
-//            System.out.println(String.format("%s |%s |%s ", "   ", mountStr(mesano.getKey(), 15), mountStr(mesano.getValue(), 11)));
-//        }
-
         return map;
+    }
+
+    public static String relevancia(BigDecimal valor) {
+        if (valor == null || BigDecimal.ZERO.compareTo(valor) >= 0) return "";
+        StringBuilder barras = new StringBuilder();
+        BigDecimal cem = new BigDecimal(100);
+        while (valor.compareTo(cem) >= 0) {
+            barras.append("|");
+            valor = valor.subtract(cem);
+        }
+        return barras.toString();
     }
 
 }
