@@ -2,7 +2,7 @@ package com.stockviewer.br.model.enums;
 
 public enum Corretora {
 
-    MODAL_MAIS("Modal Mais"), INTER_DTVM("Inter DTVM"), RICO("Rico");
+    MODAL_MAIS("Modal Mais"), INTER_DTVM("Inter DTVM"), RICO("Rico"), XDEX("XDex");
 
     private String value;
 

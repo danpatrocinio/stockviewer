@@ -1,6 +1,7 @@
 package com.stockviewer.br.utils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -18,6 +19,9 @@ public class StockViewerUtils {
         String value = v.toString().toUpperCase().replace("R$","").replace(",", ".").trim();
         if (value.length() > 2 && ".".equals(value.substring(value.length()-2, value.length()-1))) {
             value = value + "0";
+        }// 36.143.52
+        if (value.length() > 6 && ".".equals(value.substring(value.length()-7, value.length()-6))) {
+            value = value.replaceFirst("[.]", "");
         }
         return new BigDecimal(value);
     }
@@ -92,7 +96,9 @@ public class StockViewerUtils {
                 anoAporte++;
             }
             map.put(getMes(mesAporte) + "/" + anoAporte, BigDecimal.ZERO);
-            mesAporte++;
+            if (!(mesAporte == MES_ATUAL && anoAporte == ANO_ATUAL)) {
+                mesAporte++;
+            }
         }
         map.put(getMes(MES_ATUAL) + "/" + ANO_ATUAL, BigDecimal.ZERO);
         return map;
@@ -107,6 +113,12 @@ public class StockViewerUtils {
             valor = valor.subtract(cem);
         }
         return barras.toString();
+    }
+
+    public static BigDecimal aplicaPercentual(BigDecimal valor, BigDecimal total) {
+        if (valor == null) return BigDecimal.ZERO;
+        if (total == null) return new BigDecimal(100);
+        return valor.multiply(new BigDecimal(100)).divide(total, 2, RoundingMode.HALF_EVEN);
     }
 
 }

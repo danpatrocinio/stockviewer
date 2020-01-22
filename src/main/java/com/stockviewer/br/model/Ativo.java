@@ -1,5 +1,7 @@
 package com.stockviewer.br.model;
 
+import com.stockviewer.br.model.enums.ClasseAtivo;
+
 import javax.persistence.*;
 import java.math.BigDecimal;
 
@@ -16,6 +18,7 @@ public class Ativo {
     private String ticker;
     private String nome;
     private BigDecimal cotacao;
+    private ClasseAtivo classeAtivo;
 
     public Long getId() {
         return id;
@@ -48,4 +51,13 @@ public class Ativo {
     public void setCotacao(BigDecimal cotacao) {
         this.cotacao = cotacao;
     }
+
+    public ClasseAtivo getClasseAtivo() {
+        return classeAtivo;
+    }
+
+    public void setClasseAtivo(ClasseAtivo classeAtivo) {
+        this.classeAtivo = classeAtivo;
+    }
+
 }

@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS ativo (
   id_ativo  INT NOT NULL PRIMARY KEY,
   ticker    VARCHAR(7) NOT NULL,
   nome      VARCHAR(200) NOT NULL,
-  cotacao   DECIMAL(10,2)
+  cotacao   DECIMAL(10,2),
+  classe_ativo VARCHAR(1) NOT NULL
 );
 
 DROP TABLE IF EXISTS operacao;

@@ -21,7 +21,7 @@ public interface CarteiraConsolidadaRepository extends PagingAndSortingRepositor
                  "             sum(case when (tipo = 0 or tipo = 3) then (ativo.cotacao * quantidade) else (-1 * ativo.cotacao * quantidade ) end) as total_mercado" +
                  "            from operacao" +
                  "            join ativo on (ativo.id_ativo=operacao.id_ativo)" +
-                 "            group by operacao.id_ativo)" +
+                 "            group by operacao.id_ativo order by ativo.classe_ativo, total_mercado desc)" +
                  "        WHERE total_mercado > 0", nativeQuery = true
     )
     Collection<Object[]> consolidaCarteira();
