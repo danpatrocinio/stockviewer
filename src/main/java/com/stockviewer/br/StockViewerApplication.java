@@ -18,7 +18,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -63,7 +62,7 @@ public class StockViewerApplication {
 
         Ativo ativoSaved;
         int count = 0;
-        for (Operacao operacao : LeitorGoogleSheets.getLinhas()) {
+        for (Operacao operacao : LeitorGoogleSheets.getLinhasOperacoes()) {
             count++;
             ativoSaved = ativoRepository.findByTicker(operacao.getAtivo().getTicker());
             if (ativoSaved == null) {
@@ -99,12 +98,12 @@ public class StockViewerApplication {
         BigDecimal vlTotalSelic = BigDecimal.ZERO;
         BigDecimal vlTotalBTC = BigDecimal.ZERO;
         BigDecimal vlMercadoAtivo;
-        System.out.println("  # | ATIVO  |   QTD | PREÇO MÉDIO |     COTACAO |       CUSTO | VALOR DE MERCADO | RETORNO");
+        System.out.println("  # | ATIVO  |       QTD | PREÇO MÉDIO |     COTACAO |       CUSTO | VALOR DE MERCADO | RETORNO");
         for (Object[] row : carteiraRepository.consolidaCarteira()) {
             ativoCarteira = new AtivoCarteira();
             ativo = ativoRepository.findByTicker(getStr(row[1]));
             ativoCarteira.setAtivo(ativo);
-            ativoCarteira.setQuantidade(getInteger(row[2]));
+            ativoCarteira.setQuantidade(getBigDecimal(row[2]));
             ativoCarteira.setCotacao(ativo.getCotacao());
             ativoCarteira.setPrecoMedio(getBigDecimal(row[3]));
             carteira.getAtivos().add(ativoCarteira);
@@ -134,22 +133,22 @@ public class StockViewerApplication {
         System.out.println(String.format("%s |%s |%s | %s | %s | %s | %s | %s",
                 mountStr(" ", 3),
                 mountStr(" ", 7),
-                mountStr(" ", 6),
+                mountStr(" ", 10),
                 mountStr(" ", 11),
                 mountStr(" ", 11),
-                mountStr(carteira.getValorCusto(), 11),
-                mountStr(carteira.getValorMercado(), 16),
-                mountStr(retorno.toString().replace(".00", " %"), 6)));
+                mountStr(carteira.getValorCusto().setScale(2, RoundingMode.HALF_UP), 11),
+                mountStr(carteira.getValorMercado().setScale(2, RoundingMode.HALF_UP), 16),
+                mountStr(retorno.setScale(2, RoundingMode.HALF_UP).toString().concat(" %"), 6)));
 
         System.out.println();
         log(carteira.getAtivos().size() + " ativos em carteira");
 
         System.out.println();
-        System.out.println(String.format("  SELIC  | %s | %s", mountStr(vlTotalSelic, 10), mountStr(aplicaPercentual(vlTotalSelic, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC, 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11, 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes, 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii, 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()), 5)));
+        System.out.println(String.format("  SELIC  | %s | %s", mountStr(vlTotalSelic.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalSelic, carteira.getValorMercado()), 5)));
+        System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()), 5)));
+        System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()), 5)));
+        System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()), 5)));
+        System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()), 5)));
         System.out.println();
     }
 
@@ -162,7 +161,7 @@ public class StockViewerApplication {
         LinkedHashMap<String, BigDecimal> aporteMap = getInitialMap();
         System.out.println("  # |            MÊS |     APORTE  |");
         for (Operacao operacao : operacaoRepository.findByOrderByDataAsc()) {
-            BigDecimal vlOperacao = operacao.getValorUnitario().multiply(new BigDecimal(operacao.getQuantidade()));
+            BigDecimal vlOperacao = operacao.getValorUnitario().multiply(operacao.getQuantidade());
             mesAno = getMesAno(operacao.getData());
             aporte = aporteMap.get(mesAno);
             aporte = TipoOperacao.COMPRA.equals(operacao.getTipo()) ? aporte.add(vlOperacao) : aporte.subtract(vlOperacao);
@@ -179,12 +178,12 @@ public class StockViewerApplication {
                 ++naoOperados;
             }
             totalAportes = totalAportes.add(aporteMes.getValue());
-            System.out.println(String.format("%s |%s |%s |%s ", "   ", mountStr(aporteMes.getKey(), 15), mountStr(aporteMes.getValue(), 11),
+            System.out.println(String.format("%s |%s |%s |%s ", "   ", mountStr(aporteMes.getKey(), 15), mountStr(aporteMes.getValue().setScale(2, RoundingMode.HALF_UP), 11),
                     relevancia(getBigDecimal(aporteMes.getValue()))));
         }
         System.out.println();
 
-        log("meses operados: " + i + " | não operados: " + naoOperados + " | valor total: " + totalAportes + " | média mensal: " + totalAportes.divide(new BigDecimal(aporteMap.size()), RoundingMode.HALF_EVEN));
+        log("meses operados: " + i + " | não operados: " + naoOperados + " | valor total: " + totalAportes.setScale(2, RoundingMode.HALF_UP) + " | média mensal: " + totalAportes.divide(new BigDecimal(aporteMap.size()), RoundingMode.HALF_EVEN).setScale(2, RoundingMode.HALF_UP));
     }
 
     private void showCarteira(int i, Object[] row, AtivoCarteira ativoCarteira) {
@@ -195,11 +194,13 @@ public class StockViewerApplication {
         System.out.println(String.format("%s |%s |%s | %s | %s | %s | %s | %s | %s",
                 mountStr(i, 3),
                 mountStr(ativoCarteira.getAtivo().getTicker(), 7),
-                mountStr(ativoCarteira.getQuantidade(), 6),
+                (ativoCarteira.getAtivo().getClasseAtivo().equals(ClasseAtivo.BTC) ?
+                        mountStr(ativoCarteira.getQuantidade().setScale(8, RoundingMode.HALF_UP), 10) :
+                mountStr(ativoCarteira.getQuantidade().setScale(0, RoundingMode.UNNECESSARY), 10)),
                 mountStr(ativoCarteira.getPrecoMedio(), 11),
                 mountStr(ativoCarteira.getCotacao(), 11),
-                mountStr(getBigDecimal(row[4]), 11),
-                mountStr(getBigDecimal(row[5]), 16),
+                mountStr(getBigDecimal(row[4]).setScale(2, RoundingMode.HALF_UP), 11),
+                mountStr(getBigDecimal(row[5]).setScale(2, RoundingMode.HALF_UP), 16),
                 mountStr(retorno.toString().replace(".00", " %"), 6),
                 relevancia(getBigDecimal(row[5]))));
     }

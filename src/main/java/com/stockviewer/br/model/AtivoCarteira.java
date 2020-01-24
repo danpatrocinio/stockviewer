@@ -17,7 +17,7 @@ public class AtivoCarteira {
     @JoinColumn(name = "id_ativo")
     private Ativo ativo;
 
-    private Integer quantidade;
+    private BigDecimal quantidade;
 
     private BigDecimal cotacao;
 
@@ -39,11 +39,11 @@ public class AtivoCarteira {
         this.ativo = ativo;
     }
 
-    public Integer getQuantidade() {
+    public BigDecimal getQuantidade() {
         return quantidade;
     }
 
-    public void setQuantidade(Integer quantidade) {
+    public void setQuantidade(BigDecimal quantidade) {
         this.quantidade = quantidade;
     }
 

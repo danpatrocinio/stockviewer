@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.*;
@@ -33,8 +32,9 @@ public class LeitorGoogleSheets {
 
     private static Sheets sheetsService;
     private static String APPLICATION_NAME = "Operacoes Bolsa";
-    private static String SHEET_RANGE = "Notas!A:K"; // Colunas recuperadas
-    private static String SHEET_RANGE_BTC = "BTC!A:E"; // Colunas recuperadas
+    private static String SHEET_RANGE_NOTAS = "Notas!A:K"; // Colunas recuperadas
+    private static String SHEET_RANGE_ATIVOS = "Ativos!A:D"; // Colunas recuperadas
+    private static String SHEET_RANGE_BTC = "BTC!A:F"; // Colunas recuperadas
     private static String SPREADSHEET_ID = "1FRxQbvAVoD_M5QeyQxjGK7P3GlgAUmAl3_hROYsXu7E";
     private static final Logger log = LoggerFactory.getLogger(LeitorGoogleSheets.class);
 
@@ -57,23 +57,49 @@ public class LeitorGoogleSheets {
                 JacksonFactory.getDefaultInstance(), credential).setApplicationName(APPLICATION_NAME).build();
     }
 
-    public static List<Operacao> getLinhas() throws IOException, GeneralSecurityException, ParseException {
+    public static List<Ativo> getLinhasAtivos() throws IOException, GeneralSecurityException, ParseException {
         sheetsService = getSheetsService();
-        ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE).execute();
+        List<List<Object>> values;
+        int linha = 0;
 
-        List<List<Object>> values = response.getValues();
+        // Ativos;
+        List<Ativo> ativos = new ArrayList<>();
+        ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE_ATIVOS).execute();
+        values = response.getValues();
+        if (values != null && !values.isEmpty()) {
+            Ativo ativo;
+            for ( List row : values) {
+                ++linha;
+                if (linha == 1 || row.get(0).toString().startsWith("Ticker")) continue; // ignora quando for a header da planilha
+                if (row.get(0) == null || row.get(0).toString().isEmpty()) break;
+                ativo = new Ativo();
+                ativo.setTicker(row.get(0).toString());
+                ativo.setNome(row.get(1).toString());
+                ativo.setCotacao(getBigDecimal(row.get(2)));
+                ativo.setClasseAtivo(ClasseAtivo.getTipoByValue(row.get(3).toString()));
+            }
+        }
 
-        if (values == null || values.isEmpty()) {
-            log.info("\n\n\t\t\t\t\t\t [ Sem dados para ler ]\n");
-            return Collections.emptyList();
-        } else {
-            List<Operacao> operacoes = new ArrayList<>();
+        return ativos;
+    }
+
+    public static List<Operacao> getLinhasOperacoes() throws IOException, GeneralSecurityException, ParseException {
+        sheetsService = getSheetsService();
+        List<List<Object>> values;
+        int linha = 0;
+
+        // Operações;
+        List<Operacao> operacoes = new ArrayList<>();
+        ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE_NOTAS).execute();
+        values = response.getValues();
+        if (values != null && !values.isEmpty()) {
             Ativo ativo;
             TipoOperacao tipo;
             ClasseAtivo classeAtivo;
             Corretora corretora;
             for (List row : values) {
                 if (row.get(0).toString().startsWith("Carimbo")) continue; // ignora quando for a header da planilha
+                if (row.get(0) == null || row.get(0).toString().isEmpty()) break;
                 tipo = TipoOperacao.getTipoByValue(row.get(1).toString());
                 classeAtivo = (row.size() >= 11 ? ClasseAtivo.getTipoByValue(row.get(10).toString()) : null);
                 ativo = new Ativo();
@@ -83,26 +109,29 @@ public class LeitorGoogleSheets {
                 ativo.setClasseAtivo(classeAtivo);
                 corretora = Corretora.getCorretoraByValue(row.get(6).toString());
                 operacoes.add(new Operacao(getDataHora(row.get(0)), tipo, getData(row.get(2)), ativo,
-                        getInteger(row.get(4)), getBigDecimal(row.get(5)), corretora));
+                        getBigDecimal(row.get(4)), getBigDecimal(row.get(5)), corretora));
             }
 
             // BitCoins
+            Ativo bitcoin = new Ativo();
+            bitcoin.setTicker(ClasseAtivo.BTC.name());
+            bitcoin.setNome(ClasseAtivo.BTC.getDescricao());
+            bitcoin.setClasseAtivo(ClasseAtivo.BTC);
+            linha = 0;
             response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE_BTC).execute();
             values = response.getValues();
             if (values != null || !values.isEmpty()) {
                 for ( List row : values) {
-                    if (row.get(0).toString().startsWith("Carteira")) continue; // ignora quando for a header da planilha
-                    ativo = new Ativo();
-                    ativo.setTicker(ClasseAtivo.BTC.name());
-                    ativo.setNome(ClasseAtivo.BTC.getDescricao());
-                    ativo.setCotacao(getBigDecimal(row.get(1)));
-                    ativo.setClasseAtivo(ClasseAtivo.BTC);
-                    corretora = Corretora.XDEX;
-                    operacoes.add(new Operacao(new Date(), TipoOperacao.COMPRA, new Date(), ativo, 1, getBigDecimal(row.get(1)), corretora));
+                    ++linha;
+                    if (linha == 1 || row.get(0).toString().startsWith("Operação")) continue; // ignora quando for a header da planilha
+                    if (row.get(0) == null || row.get(0).toString().isEmpty()) break;
+                    if (linha == 2 && bitcoin.getCotacao() == null) bitcoin.setCotacao(getBigDecimal(row.get(5)));
+                    tipo = TipoOperacao.getTipoByValue(row.get(0).toString());
+                    operacoes.add(new Operacao(getData(row.get(1)), tipo, getData(row.get(1)), bitcoin,  getBigDecimal(row.get(2)), getBigDecimal(row.get(3)), Corretora.XDEX));
                 }
             }
-
-            return operacoes;
         }
+
+        return operacoes;
     }
 }

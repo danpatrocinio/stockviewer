@@ -23,14 +23,14 @@ public class Operacao {
     @ManyToOne
     @JoinColumn(name = "id_ativo", nullable = false)
     private Ativo ativo;
-    private Integer quantidade;
+    private BigDecimal quantidade;
     @Column(name = "valor_unitario")
     private BigDecimal valorUnitario;
     private Corretora corretora;
 
     public Operacao(){}
 
-    public Operacao(Date carimboDataHora, TipoOperacao tipo, Date data, Ativo ativo, Integer quantidade, BigDecimal valorUnitario, Corretora corretora) {
+    public Operacao(Date carimboDataHora, TipoOperacao tipo, Date data, Ativo ativo, BigDecimal quantidade, BigDecimal valorUnitario, Corretora corretora) {
         this.carimboDataHora = carimboDataHora;
         this.tipo = tipo;
         this.data = data;
@@ -80,11 +80,11 @@ public class Operacao {
         this.ativo = ativo;
     }
 
-    public Integer getQuantidade() {
+    public BigDecimal getQuantidade() {
         return quantidade;
     }
 
-    public void setQuantidade(Integer quantidade) {
+    public void setQuantidade(BigDecimal quantidade) {
         this.quantidade = quantidade;
     }
 
