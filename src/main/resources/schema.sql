@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS operacao (
   tipo              VARCHAR(6) NOT NULL,
   data              DATE,
   id_ativo          INT,
-  quantidade        DECIMAL(12,10),
+  quantidade        DECIMAL(15,10),
   valor_unitario    DECIMAL(10,2),
   corretora         VARCHAR(30)
 );
@@ -34,6 +34,6 @@ DROP TABLE IF EXISTS ativo_carteira;
 CREATE TABLE IF NOT EXISTS ativo_carteira (
   id_ativo_carteira INT NOT NULL PRIMARY KEY,
   id_ativo          INT,
-  quantidade        DECIMAL(12,10),
+  quantidade        DECIMAL(15,10),
   preco_medio       DECIMAL(10,2)
 );
