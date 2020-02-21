@@ -6,7 +6,8 @@ public enum ClasseAtivo {
     ACOES("A", "Ações"),
     ETF_IVVB11("E", "Indice SP500"),
     BTC("B", "BitCoin"),
-    SELIC("S", "Tesouro Selic");
+    SELIC("S", "Tesouro Selic"),
+    LCI("L", "Letra de Crédito Imobiliário");
 
     private String tipo;
     private String descricao;

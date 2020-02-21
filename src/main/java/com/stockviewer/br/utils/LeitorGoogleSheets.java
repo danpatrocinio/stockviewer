@@ -22,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
 import java.util.*;
@@ -35,6 +37,7 @@ public class LeitorGoogleSheets {
     private static String SHEET_RANGE_NOTAS = "Notas!A:K"; // Colunas recuperadas
     private static String SHEET_RANGE_ATIVOS = "Ativos!A:D"; // Colunas recuperadas
     private static String SHEET_RANGE_BTC = "BTC!A:F"; // Colunas recuperadas
+    private static String SHEET_RANGE_LCI = "LCI!A:F"; // Colunas recuperadas
     private static String SPREADSHEET_ID = "1FRxQbvAVoD_M5QeyQxjGK7P3GlgAUmAl3_hROYsXu7E";
     private static final Logger log = LoggerFactory.getLogger(LeitorGoogleSheets.class);
 
@@ -121,7 +124,7 @@ public class LeitorGoogleSheets {
             response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE_BTC).execute();
             values = response.getValues();
             if (values != null || !values.isEmpty()) {
-                for ( List row : values) {
+                for (List row : values) {
                     ++linha;
                     if (linha == 1 || row.get(0).toString().startsWith("Operação")) continue; // ignora quando for a header da planilha
                     if (row.get(0) == null || row.get(0).toString().isEmpty()) break;
@@ -129,6 +132,29 @@ public class LeitorGoogleSheets {
                     tipo = TipoOperacao.getTipoByValue(row.get(0).toString());
                     operacoes.add(new Operacao(getData(row.get(1)), tipo, getData(row.get(1)), bitcoin,  getBigDecimal(row.get(2)), getBigDecimal(row.get(3)), Corretora.XDEX));
                 }
+            }
+
+            // LCI
+            Ativo lci = new Ativo();
+            lci.setTicker(ClasseAtivo.LCI.name());
+            lci.setNome(ClasseAtivo.LCI.getDescricao());
+            lci.setClasseAtivo(ClasseAtivo.LCI);
+            linha = 0;
+            BigDecimal vlTotalLci = BigDecimal.ZERO;
+            response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE_LCI).execute();
+            values = response.getValues();
+            if (values != null || !values.isEmpty()) {
+                for (List row : values) {
+                    ++linha;
+                    if (linha == 1 || row.get(0).toString().startsWith("Operação")) continue; // ignora quando for a header da planilha
+                    if (row.get(0) == null || row.get(0).toString().isEmpty()) break;
+                    //if (linha == 2 && lci.getCotacao() == null) lci.setCotacao(getBigDecimal(row.get(6)));
+                    vlTotalLci = vlTotalLci.add(getBigDecimal(row.get(5)));
+                    tipo = TipoOperacao.getTipoByValue(row.get(0).toString());
+                    operacoes.add(new Operacao(getData(row.get(1)), tipo, getData(row.get(1)), lci,  BigDecimal.ONE, getBigDecimal(row.get(4)), Corretora.INTER_DTVM));
+                }
+                lci.setCotacao(vlTotalLci);
+                // public Operacao(Date carimboDataHora, TipoOperacao tipo, Date data, Ativo ativo, BigDecimal quantidade, BigDecimal valorUnitario, Corretora corretora) {
             }
         }
 

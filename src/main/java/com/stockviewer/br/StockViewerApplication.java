@@ -96,6 +96,7 @@ public class StockViewerApplication {
         BigDecimal vlTotalAcoes = BigDecimal.ZERO;
         BigDecimal vlTotalETFIVVB11 = BigDecimal.ZERO;
         BigDecimal vlTotalSelic = BigDecimal.ZERO;
+        BigDecimal vlTotalLci = BigDecimal.ZERO;
         BigDecimal vlTotalBTC = BigDecimal.ZERO;
         BigDecimal vlMercadoAtivo;
         System.out.println("  # | ATIVO  |       QTD | PREÇO MÉDIO |     COTACAO |       CUSTO | VALOR DE MERCADO | RETORNO");
@@ -103,17 +104,25 @@ public class StockViewerApplication {
             ativoCarteira = new AtivoCarteira();
             ativo = ativoRepository.findByTicker(getStr(row[1]));
             ativoCarteira.setAtivo(ativo);
-            ativoCarteira.setQuantidade(getBigDecimal(row[2]));
+            if (ClasseAtivo.LCI.equals(ativo.getClasseAtivo())) {
+                ativoCarteira.setQuantidade(BigDecimal.ONE);
+                ativoCarteira.setPrecoMedio(getBigDecimal(row[4]).setScale(2, RoundingMode.HALF_UP));
+                row[5] = getBigDecimal(row[5]).divide(getBigDecimal(row[2])).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                ativoCarteira.setQuantidade(getBigDecimal(row[2]));
+                ativoCarteira.setPrecoMedio(getBigDecimal(row[3]));
+            }
             ativoCarteira.setCotacao(ativo.getCotacao());
-            ativoCarteira.setPrecoMedio(getBigDecimal(row[3]));
             carteira.getAtivos().add(ativoCarteira);
             carteira.setValorCusto(carteira.getValorCusto().add(ativoCarteira.getPrecoMedio().multiply(getBigDecimal(row[2]))));
-            vlMercadoAtivo = ativoCarteira.getAtivo().getCotacao().multiply(getBigDecimal(row[2]));
+            vlMercadoAtivo = ativoCarteira.getAtivo().getCotacao().multiply(ativoCarteira.getQuantidade());
             carteira.setValorMercado(carteira.getValorMercado().add(vlMercadoAtivo));
             showCarteira(++i, row, ativoCarteira);
             if (ativo.getClasseAtivo() != null) {
                 if (ClasseAtivo.SELIC.equals(ativo.getClasseAtivo())) {
                     vlTotalSelic = vlTotalSelic.add(vlMercadoAtivo);
+                } else if (ClasseAtivo.LCI.equals(ativo.getClasseAtivo())) {
+                    vlTotalLci = vlTotalLci.add(vlMercadoAtivo);
                 } else if (ClasseAtivo.FII.equals(ativo.getClasseAtivo())) {
                     vlTotalFii = vlTotalFii.add(vlMercadoAtivo);
                 } else if (ClasseAtivo.ACOES.equals(ativo.getClasseAtivo())) {
@@ -145,6 +154,7 @@ public class StockViewerApplication {
 
         System.out.println();
         System.out.println(String.format("  SELIC  | %s | %s", mountStr(vlTotalSelic.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalSelic, carteira.getValorMercado()), 5)));
+        System.out.println(String.format("  LCI    | %s | %s", mountStr(vlTotalLci.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalLci, carteira.getValorMercado()), 5)));
         System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()), 5)));
         System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()), 5)));
         System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()), 5)));
