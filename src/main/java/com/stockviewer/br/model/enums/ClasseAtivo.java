@@ -3,11 +3,12 @@ package com.stockviewer.br.model.enums;
 public enum ClasseAtivo {
 
     FII("F", "Fundos de Investimentos Imobiliários"),
+    LCI("L", "Letra de Crédito Imobiliário"),
     ACOES("A", "Ações"),
-    ETF_IVVB11("E", "Indice SP500"),
-    BTC("B", "BitCoin"),
     SELIC("S", "Tesouro Selic"),
-    LCI("L", "Letra de Crédito Imobiliário");
+    ETF_IVVB11("E", "Indice SP500"),
+    BTC("B", "BitCoin")
+    ;
 
     private String tipo;
     private String descricao;
