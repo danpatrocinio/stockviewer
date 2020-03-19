@@ -152,13 +152,14 @@ public class StockViewerApplication {
         System.out.println();
         log(carteira.getAtivos().size() + " ativos em carteira");
 
+        BigDecimal totalRendaFixa = vlTotalSelic.add(vlTotalLci);
+
         System.out.println();
-        System.out.println(String.format("  LCI    | %s | %s", mountStr(vlTotalLci.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalLci, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  SELIC  | %s | %s", mountStr(vlTotalSelic.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalSelic, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()), 5)));
-        System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()), 5)));
+        System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()).toString().concat("%"), 5)));
+        System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()).toString().concat("%"), 5)));
+        System.out.println(String.format("  R.FIXA | %s | %s", mountStr(totalRendaFixa.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(totalRendaFixa, carteira.getValorMercado()).toString().concat("%"), 5)));
+        System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()).toString().concat("%"), 5)));
+        System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()).toString().concat("%"), 5)));
         System.out.println();
     }
 
