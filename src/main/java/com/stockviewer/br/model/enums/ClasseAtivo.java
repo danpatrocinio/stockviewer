@@ -5,8 +5,8 @@ public enum ClasseAtivo {
     FII("F", "Fundos de Investimentos Imobiliários"),
     LCI("L", "Letra de Crédito Imobiliário"),
     ACOES("A", "Ações"),
-    SELIC("S", "Tesouro Selic"),
     ETF_IVVB11("E", "Indice SP500"),
+    SELIC("S", "Tesouro Selic"),
     BTC("B", "BitCoin")
     ;
 

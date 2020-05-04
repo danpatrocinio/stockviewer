@@ -5,6 +5,7 @@ import com.stockviewer.br.model.AtivoCarteira;
 import com.stockviewer.br.model.CarteiraConsolidada;
 import com.stockviewer.br.model.Operacao;
 import com.stockviewer.br.model.enums.ClasseAtivo;
+import com.stockviewer.br.model.enums.Logs;
 import com.stockviewer.br.model.enums.TipoOperacao;
 import com.stockviewer.br.repository.AtivoRepository;
 import com.stockviewer.br.repository.CarteiraConsolidadaRepository;
@@ -12,19 +13,16 @@ import com.stockviewer.br.repository.OperacaoRepository;
 import com.stockviewer.br.utils.LeitorGoogleSheets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.GeneralSecurityException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,25 +30,20 @@ import java.util.Map;
 import static com.stockviewer.br.utils.StockViewerUtils.*;
 
 @SpringBootApplication
-@EnableScheduling
 public class StockViewerApplication {
 
     private static final Logger log = LoggerFactory.getLogger(StockViewerApplication.class);
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
     public static void main(String[] args) {
         SpringApplication.run(StockViewerApplication.class, args);
     }
 
-    @Autowired
-    private OperacaoRepository operacaoRepository;
-    @Autowired
-    private AtivoRepository ativoRepository;
-    @Autowired
-    private CarteiraConsolidadaRepository carteiraRepository;
+    private Map<Logs, Boolean> loggind;
 
     @Bean
     public CommandLineRunner populateApiData(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository, CarteiraConsolidadaRepository carteiraRepository) {
         return (args) -> {
+            loggind = Logs.getLogs(args);
+            log(String.format("Exibir carteira: %b | Exibir classes: %b | Exibir aportes: %b", this.isLogCarteira(), this.isLogClasses(), this.isLogAportes()));
             buscarDados(operacaoRepository, ativoRepository);
             consolidarCarteira(ativoRepository, carteiraRepository);
             consolidaAportes(operacaoRepository);
@@ -99,7 +92,8 @@ public class StockViewerApplication {
         BigDecimal vlTotalLci = BigDecimal.ZERO;
         BigDecimal vlTotalBTC = BigDecimal.ZERO;
         BigDecimal vlMercadoAtivo;
-        System.out.println("  # | ATIVO  |       QTD | PREÇO MÉDIO |     COTACAO |       CUSTO | VALOR DE MERCADO | RETORNO");
+        if (this.isLogCarteira())
+            System.out.println("  # | ATIVO  |       QTD | PREÇO MÉDIO |     COTACAO |       CUSTO | VALOR DE MERCADO | RETORNO");
         for (Object[] row : carteiraRepository.consolidaCarteira()) {
             ativoCarteira = new AtivoCarteira();
             ativo = ativoRepository.findByTicker(getStr(row[1]));
@@ -107,7 +101,7 @@ public class StockViewerApplication {
             if (ClasseAtivo.LCI.equals(ativo.getClasseAtivo())) {
                 ativoCarteira.setQuantidade(BigDecimal.ONE);
                 ativoCarteira.setPrecoMedio(getBigDecimal(row[4]).setScale(2, RoundingMode.HALF_UP));
-                row[5] = getBigDecimal(row[5]).divide(getBigDecimal(row[2])).setScale(2, RoundingMode.HALF_UP);
+                row[5] = getBigDecimal(row[5]).divide(getBigDecimal(row[2]), RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP);
             } else {
                 ativoCarteira.setQuantidade(getBigDecimal(row[2]));
                 ativoCarteira.setPrecoMedio(getBigDecimal(row[3]));
@@ -117,7 +111,8 @@ public class StockViewerApplication {
             carteira.setValorCusto(carteira.getValorCusto().add(ativoCarteira.getPrecoMedio().multiply(getBigDecimal(row[2]))));
             vlMercadoAtivo = ativoCarteira.getAtivo().getCotacao().multiply(ativoCarteira.getQuantidade());
             carteira.setValorMercado(carteira.getValorMercado().add(vlMercadoAtivo));
-            showCarteira(++i, row, ativoCarteira);
+            if (this.isLogCarteira())
+                showCarteira(++i, row, ativoCarteira);
             if (ativo.getClasseAtivo() != null) {
                 if (ClasseAtivo.SELIC.equals(ativo.getClasseAtivo())) {
                     vlTotalSelic = vlTotalSelic.add(vlMercadoAtivo);
@@ -137,33 +132,39 @@ public class StockViewerApplication {
 
         carteiraRepository.save(carteira);
 
-        BigDecimal retorno = carteira.getValorMercado().divide(carteira.getValorCusto(), RoundingMode.HALF_UP)
-                .subtract(new BigDecimal(1)).multiply(new BigDecimal(100));
-        System.out.println(String.format("%s |%s |%s | %s | %s | %s | %s | %s",
-                mountStr(" ", 3),
-                mountStr(" ", 7),
-                mountStr(" ", 10),
-                mountStr(" ", 11),
-                mountStr(" ", 11),
-                mountStr(carteira.getValorCusto().setScale(2, RoundingMode.HALF_UP), 11),
-                mountStr(carteira.getValorMercado().setScale(2, RoundingMode.HALF_UP), 16),
-                mountStr(retorno.setScale(2, RoundingMode.HALF_UP).toString().concat(" %"), 6)));
+        if (this.isLogCarteira()) {
+            final BigDecimal retorno = carteira.getValorMercado().divide(carteira.getValorCusto(), RoundingMode.HALF_UP)
+                    .subtract(new BigDecimal(1)).multiply(new BigDecimal(100));
+            System.out.println(String.format("%s |%s |%s | %s | %s | %s | %s | %s",
+                    mountStr(" ", 3),
+                    mountStr(" ", 7),
+                    mountStr(" ", 10),
+                    mountStr(" ", 11),
+                    mountStr(" ", 11),
+                    mountStr(carteira.getValorCusto().setScale(2, RoundingMode.HALF_UP), 11),
+                    mountStr(carteira.getValorMercado().setScale(2, RoundingMode.HALF_UP), 16),
+                    mountStr(retorno.setScale(2, RoundingMode.HALF_UP).toString().concat(" %"), 6)));
 
-        System.out.println();
-        log(carteira.getAtivos().size() + " ativos em carteira");
+            System.out.println();
+            log(carteira.getAtivos().size() + " ativos em carteira");
+        }
 
-        BigDecimal totalRendaFixa = vlTotalSelic.add(vlTotalLci);
-
-        System.out.println();
-        System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()).toString().concat("%"), 5)));
-        System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()).toString().concat("%"), 5)));
-        System.out.println(String.format("  R.FIXA | %s | %s", mountStr(totalRendaFixa.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(totalRendaFixa, carteira.getValorMercado()).toString().concat("%"), 5)));
-        System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()).toString().concat("%"), 5)));
-        System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()).toString().concat("%"), 5)));
-        System.out.println();
+        if (this.isLogClasses()) {
+            final BigDecimal totalRendaFixa = vlTotalSelic.add(vlTotalLci);
+            System.out.println();
+            System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()).toString().concat("%"), 5)));
+            System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()).toString().concat("%"), 5)));
+            System.out.println(String.format("  R.FIXA | %s | %s", mountStr(totalRendaFixa.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(totalRendaFixa, carteira.getValorMercado()).toString().concat("%"), 5)));
+            System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()).toString().concat("%"), 5)));
+            System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()).toString().concat("%"), 5)));
+            System.out.println();
+        }
     }
 
     private void consolidaAportes(OperacaoRepository operacaoRepository) {
+
+        if (!this.isLogAportes())
+            return;
 
         log("Aportes mensais");
 
@@ -214,6 +215,16 @@ public class StockViewerApplication {
                 mountStr(getBigDecimal(row[5]).setScale(2, RoundingMode.HALF_UP), 16),
                 mountStr(retorno.toString().replace(".00", " %"), 6),
                 relevancia(getBigDecimal(row[5]))));
+    }
+
+    private boolean isLogCarteira() {
+        return loggind.containsKey(Logs.TUDO) || loggind.containsKey(Logs.CARTEIRA);
+    }
+    private boolean isLogClasses() {
+        return loggind.containsKey(Logs.TUDO) || loggind.containsKey(Logs.CLASSE);
+    }
+    private boolean isLogAportes() {
+        return loggind.containsKey(Logs.TUDO) || loggind.containsKey(Logs.APORTE);
     }
 
     private void log(String msg) {
