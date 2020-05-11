@@ -80,13 +80,14 @@ public class LeitorGoogleSheets {
                 ativo.setNome(row.get(1).toString());
                 ativo.setCotacao(getBigDecimal(row.get(2)));
                 ativo.setClasseAtivo(ClasseAtivo.getTipoByValue(row.get(3).toString()));
+                ativos.add(ativo);
             }
         }
 
         return ativos;
     }
 
-    public static List<Operacao> getLinhasOperacoes() throws IOException, GeneralSecurityException, ParseException {
+    public static List<Operacao> getOperacoes() throws IOException, GeneralSecurityException, ParseException {
         sheetsService = getSheetsService();
         List<List<Object>> values;
         int linha = 0;

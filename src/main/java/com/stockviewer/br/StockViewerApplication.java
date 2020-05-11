@@ -44,28 +44,44 @@ public class StockViewerApplication {
         return (args) -> {
             loggind = Logs.getLogs(args);
             log(String.format("Exibir carteira: %b | Exibir classes: %b | Exibir aportes: %b", this.isLogCarteira(), this.isLogClasses(), this.isLogAportes()));
-            buscarDados(operacaoRepository, ativoRepository);
+            buscarAtivos(ativoRepository);
+            buscarOperacoes(operacaoRepository, ativoRepository);
             consolidarCarteira(ativoRepository, carteiraRepository);
             consolidaAportes(operacaoRepository);
         };
     }
 
-    private void buscarDados(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository) throws IOException, GeneralSecurityException, ParseException {
-        log("Carregando dados do Google Sheets");
+    private void buscarAtivos(AtivoRepository ativoRepository) throws ParseException, GeneralSecurityException, IOException {
+        log("Carregando ativos do Google Sheets");
+        int count = 0;
+        for (Ativo ativo : LeitorGoogleSheets.getLinhasAtivos()) {
+            salvarAtivo(ativoRepository, ativo);
+            ++count;
+        }
+        log(count + " ativos carregados");
+    }
+
+    private Ativo salvarAtivo(AtivoRepository ativoRepository, Ativo ativo) {
+        Ativo ativoSaved;
+        ativoSaved = new Ativo();
+        ativoSaved.setTicker(ativo.getTicker());
+        ativoSaved.setNome(ativo.getNome());
+        ativoSaved.setCotacao(ativo.getCotacao());
+        ativoSaved.setClasseAtivo(ativo.getClasseAtivo());
+        ativoRepository.save(ativoSaved);
+        return ativoSaved;
+    }
+
+    private void buscarOperacoes(OperacaoRepository operacaoRepository, AtivoRepository ativoRepository) throws IOException, GeneralSecurityException, ParseException {
+        log("Carregando operacoes do Google Sheets");
 
         Ativo ativoSaved;
         int count = 0;
-        for (Operacao operacao : LeitorGoogleSheets.getLinhasOperacoes()) {
+        for (Operacao operacao : LeitorGoogleSheets.getOperacoes()) {
             count++;
             ativoSaved = ativoRepository.findByTicker(operacao.getAtivo().getTicker());
             if (ativoSaved == null) {
-                ativoSaved = new Ativo();
-                ativoSaved.setTicker(operacao.getAtivo().getTicker());
-                ativoSaved.setNome(operacao.getAtivo().getNome());
-                ativoSaved.setCotacao(operacao.getAtivo().getCotacao());
-                ativoSaved.setClasseAtivo(operacao.getAtivo().getClasseAtivo());
-                ativoRepository.save(ativoSaved);
-                ativoSaved = ativoRepository.findByTicker(operacao.getAtivo().getTicker());
+                ativoSaved = salvarAtivo(ativoRepository, operacao.getAtivo());
             }
             operacao.setAtivo(ativoSaved);
             operacao.setTipo(operacao.getTipo());
@@ -151,12 +167,16 @@ public class StockViewerApplication {
 
         if (this.isLogClasses()) {
             final BigDecimal totalRendaFixa = vlTotalSelic.add(vlTotalLci);
-            System.out.println();
-            System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()).toString().concat("%"), 5)));
-            System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()).toString().concat("%"), 5)));
-            System.out.println(String.format("  R.FIXA | %s | %s", mountStr(totalRendaFixa.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(totalRendaFixa, carteira.getValorMercado()).toString().concat("%"), 5)));
-            System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()).toString().concat("%"), 5)));
-            System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()).toString().concat("%"), 5)));
+            if (vlTotalBTC.compareTo(BigDecimal.ZERO) > 0)
+                System.out.println(String.format("  BTC    | %s | %s", mountStr(vlTotalBTC.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalBTC, carteira.getValorMercado()).toString().concat("%"), 5)));
+            if (vlTotalETFIVVB11.compareTo(BigDecimal.ZERO) > 0)
+                System.out.println(String.format("  IVVB11 | %s | %s", mountStr(vlTotalETFIVVB11.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalETFIVVB11, carteira.getValorMercado()).toString().concat("%"), 5)));
+            if (totalRendaFixa.compareTo(BigDecimal.ZERO) > 0)
+                System.out.println(String.format("  R.FIXA | %s | %s", mountStr(totalRendaFixa.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(totalRendaFixa, carteira.getValorMercado()).toString().concat("%"), 5)));
+            if (vlTotalAcoes.compareTo(BigDecimal.ZERO) > 0)
+                System.out.println(String.format("  ACOES  | %s | %s", mountStr(vlTotalAcoes.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalAcoes, carteira.getValorMercado()).toString().concat("%"), 5)));
+            if (vlTotalFii.compareTo(BigDecimal.ZERO) > 0)
+                System.out.println(String.format("  FIIs   | %s | %s", mountStr(vlTotalFii.setScale(2, RoundingMode.HALF_UP), 10), mountStr(aplicaPercentual(vlTotalFii, carteira.getValorMercado()).toString().concat("%"), 5)));
             System.out.println();
         }
     }
