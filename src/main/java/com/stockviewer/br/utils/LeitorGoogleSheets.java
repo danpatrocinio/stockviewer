@@ -34,7 +34,7 @@ public class LeitorGoogleSheets {
 
     private static Sheets sheetsService;
     private static String APPLICATION_NAME = "Operacoes Bolsa";
-    private static String SHEET_RANGE_NOTAS = "Notas!A:K"; // Colunas recuperadas
+    private static String SHEET_RANGE_NOTAS = "Notas!A:H"; // Colunas recuperadas
     private static String SHEET_RANGE_ATIVOS = "Ativos!A:D"; // Colunas recuperadas
     private static String SHEET_RANGE_BTC = "BTC!A:F"; // Colunas recuperadas
     private static String SHEET_RANGE_LCI = "LCI!A:F"; // Colunas recuperadas
@@ -60,7 +60,7 @@ public class LeitorGoogleSheets {
                 JacksonFactory.getDefaultInstance(), credential).setApplicationName(APPLICATION_NAME).build();
     }
 
-    public static List<Ativo> getLinhasAtivos() throws IOException, GeneralSecurityException, ParseException {
+    public static List<Ativo> getLinhasAtivos() throws IOException, GeneralSecurityException {
         sheetsService = getSheetsService();
         List<List<Object>> values;
         int linha = 0;
@@ -82,6 +82,7 @@ public class LeitorGoogleSheets {
                 ativo.setClasseAtivo(ClasseAtivo.getTipoByValue(row.get(3).toString()));
                 ativos.add(ativo);
             }
+            StockViewerUtils.getPrecoAtivoFromYahoo(ativos);
         }
 
         return ativos;
@@ -92,7 +93,7 @@ public class LeitorGoogleSheets {
         List<List<Object>> values;
         int linha = 0;
 
-        // Operações;
+        // Operações na B3;
         List<Operacao> operacoes = new ArrayList<>();
         ValueRange response = sheetsService.spreadsheets().values().get(SPREADSHEET_ID, SHEET_RANGE_NOTAS).execute();
         values = response.getValues();
@@ -108,15 +109,13 @@ public class LeitorGoogleSheets {
                 classeAtivo = (row.size() >= 11 ? ClasseAtivo.getTipoByValue(row.get(10).toString()) : null);
                 ativo = new Ativo();
                 ativo.setTicker(row.get(3).toString());
-                ativo.setNome(row.size() >= 9 ? row.get(8).toString() : null);
-                ativo.setCotacao(row.size() >= 10 ? getBigDecimal(row.get(9)) : null);
                 ativo.setClasseAtivo(classeAtivo);
                 corretora = Corretora.getCorretoraByValue(row.get(6).toString());
                 operacoes.add(new Operacao(getDataHora(row.get(0)), tipo, getData(row.get(2)), ativo,
                         getBigDecimal(row.get(4)), getBigDecimal(row.get(5)), corretora));
             }
 
-            // BitCoins
+            // BitCoins;
             Ativo bitcoin = new Ativo();
             bitcoin.setTicker(ClasseAtivo.BTC.name());
             bitcoin.setNome(ClasseAtivo.BTC.getDescricao());
@@ -135,7 +134,7 @@ public class LeitorGoogleSheets {
                 }
             }
 
-            // LCI
+            // LCI;
             Ativo lci = new Ativo();
             lci.setTicker(ClasseAtivo.LCI.name());
             lci.setNome(ClasseAtivo.LCI.getDescricao());

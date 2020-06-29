@@ -1,17 +1,21 @@
 package com.stockviewer.br.model.enums;
 
+import java.util.Arrays;
+
 public enum ClasseAtivo {
 
     FII("F", "Fundos de Investimentos Imobiliários"),
     LCI("L", "Letra de Crédito Imobiliário"),
     ACOES("A", "Ações"),
     ETF_IVVB11("E", "Indice SP500"),
-    SELIC("S", "Tesouro Selic"),
-    BTC("B", "BitCoin")
+    SELIC_CDI_DI("S", "Tesouro Selic, CDI ou Fundo de Renda Fixa DI"),
+    BTC("B", "BitCoin"),
+    DOLAR("D", "Dolar"),
     ;
 
-    private String tipo;
-    private String descricao;
+    final private String tipo;
+    final private String descricao;
+    final private static String[] ativosDolarizados = new String[] {"IVV", "VOO", "VNQ", "VIOV", "EEMV", "SLYV", "IAU"};
 
     ClasseAtivo(String tipo, String descricao) {
         this.tipo = tipo;
@@ -24,6 +28,10 @@ public enum ClasseAtivo {
             if (classeAtivo.getTipo().equals(tipo)) return classeAtivo;
         }
         throw new IllegalArgumentException("Classe de ativo " + tipo + " não encontrado no enum");
+    }
+
+    public static boolean isAtivoDolarizado(String ticker) {
+        return Arrays.stream(ativosDolarizados).anyMatch(s -> s.equals(ticker));
     }
 
     public String getDescricao() {

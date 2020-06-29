@@ -2,9 +2,14 @@ package com.stockviewer.br.model.enums;
 
 public enum Corretora {
 
-    MODAL_MAIS("Modal Mais"), INTER_DTVM("Inter DTVM"), RICO("Rico"), XDEX("XDex");
+    MODAL_MAIS("Modal Mais"),
+    INTER_DTVM("Inter DTVM"),
+    RICO("Rico"),
+    XDEX("XDex"),
+    BTG_PACTUAL("BTG Pactual"),
+    AVENUE("Avenue Securities");
 
-    private String value;
+    final private String value;
 
     Corretora(String value) {
         this.value = value;
